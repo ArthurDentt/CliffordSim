@@ -1,23 +1,27 @@
 # Tableau Class file for efficient Clifford circuit simulation
 # Author: Andrew Connelly
 
-from numpy import shape
-from copy import copy
+from numpy import shape, asarray
 
 class Tableau():
     """ Base Tableau Class which is used to simulate Clifford circuits """
     
     def __init__(self, data):
         """ Initialize a tableau from data, calculate number of qubits """
-        self.data = data # base tableau data.
+        self._data = asarray(data,dtype=bool) # base tableau data.
         self.num_qubits = (shape(data)[0])//2 # number of qubits being simulated. (2n+1)//2 = n 
     
     def __repr__(self):
-        """ repr method for printing tableau stabs & destabs """
-        stabilizers = [_row_to_str(self.data[i,:]) for i in range(self.num_qubits)]
-        destabilizers = [_row_to_str(self.data[i+self.num_qubits,:]) for i in range(self.num_qubits)]
+        """ Repr method for printing tableau stabs & destabs """
+        stabilizers = [_row_to_str(self._data[i,:]) for i in range(self.num_qubits)]
+        destabilizers = [_row_to_str(self._data[i+self.num_qubits,:]) for i in range(self.num_qubits)]
         return "Stabilizers: " + str(stabilizers) + "\nDestabilizers: " + str(destabilizers) 
     
+    @property
+    def data(self):
+        """ Returns the base tableau data """
+        return asarray(self._data,dtype=int) # cast back to integer datatype before returning
+
     def H(self, index):
         """ Mutates the Tableau's data to perform a Hadamard gate on qubit in position `index` """
         
@@ -25,12 +29,10 @@ class Tableau():
         self._check_index_invalid(index)
         
         # adjust phase column (r = r^(x*z))
-        self.data[:,-1] ^= (self.data[:,index]*self.data[:,self.num_qubits+index]) 
+        self._data[:,-1] ^= (self._data[:,index]&self._data[:,self.num_qubits+index]) 
 
         # swap x_ind and z_ind columns 
-        temp = copy(self.data[:,index]) # TODO: Cleaner swap?
-        self.data[:,index] = self.data[:,self.num_qubits+index]
-        self.data[:,self.num_qubits+index] = temp
+        self._data[:,[index,self.num_qubits+index]] = self._data[:,[self.num_qubits+index,index]]
     
     def S(self, index):
         """ Mutates the Tableau's data to perform an S gate on qubit in position `index` """
@@ -39,33 +41,35 @@ class Tableau():
         self._check_index_invalid(index)
 
         # adjust phase column (r = r^(x*z))
-        self.data[:,-1] ^= (self.data[:,self.num_qubits+index]*self.data[:,index])
+        self._data[:,-1] ^= (self._data[:,self.num_qubits+index]&self._data[:,index])
 
         # adjust z column (z = z^x)
-        self.data[:,index] = (self.data[:,index]^self.data[:,self.num_qubits+index])
+        self._data[:,index] = (self._data[:,index]^self._data[:,self.num_qubits+index])
     
     def CX(self, control, target):
         """ Mutates the Tableau's data to perform an CX gate acting from `control` to `target` """
         
         # check for invalid qubit indices, raise error if so.
+        self._check_valid_control_target(control,target)
         self._check_index_invalid(control)
         self._check_index_invalid(target)
 
         # adjust phase column (r = r ^ x_c * z_t * (x_t ^ z_c ^ 1))
-        self.data[:,-1] ^= (self.data[:,self.num_qubits+control] * self.data[:,target] *
-                            (self.data[:,self.num_qubits+target] ^ (self.data[:,control] ^ 1)))
+        self._data[:,-1] ^= (self._data[:,self.num_qubits+control] & self._data[:,target] &
+                            (self._data[:,self.num_qubits+target] ^ (self._data[:,control] ^ True)))
         # adjust x_t column (x_t = x_t ^ x_c)
-        self.data[:,self.num_qubits+target] ^= self.data[:,self.num_qubits+control]
+        self._data[:,self.num_qubits+target] ^= self._data[:,self.num_qubits+control]
         # adjust z_c column (z_c = z_c ^ z_t)
-        self.data[:,control] = (self.data[:,target] ^ self.data[:,control])
+        self._data[:,control] = (self._data[:,target] ^ self._data[:,control])
     
     def CZ(self,control,target): # TODO: Analytical calc for less swaps
         """ Mutates the Tableau's data to perform a CZ gate acting from `control` to `target` """
         
         # check for invalid qubit indices, raise error if so.
+        self._check_valid_control_target(control,target)
         self._check_index_invalid(control)
         self._check_index_invalid(target)
-        
+
         # naive CZ = H_t CX H_t
         self.H(target)
         self.CX(control,target)
@@ -75,6 +79,10 @@ class Tableau():
         # check for invalid qubit index, raise error if so.
         if index < 0 or index >= self.num_qubits:
             raise ValueError(rf"Invalid qubit index {index}")
+    
+    def _check_valid_control_target(self, control, target):
+        if control==target:
+            raise ValueError("must have distinct control and target indices")
 
 
 # ------------------------------------- #
@@ -96,7 +104,3 @@ def _row_to_str(rowvec):
         else:
             operator += 'I'
     return operator
-
-def _swap(vec1,vec2):
-    """ swap method to help with swapping data without temp variables (useful ??)"""
-    return vec2, vec1
