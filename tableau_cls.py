@@ -22,8 +22,7 @@ class Tableau():
         """ Mutates the Tableau's data to perform a Hadamard gate on qubit in position `index` """
         
         # check for invalid qubit index, raise error if so.
-        if index < 0 or index >= self.num_qubits:
-            raise ValueError(rf"Invalid qubit index {index}")
+        self._check_index_invalid(index)
         
         # adjust phase column (r = r^(x*z))
         self.data[:,-1] ^= (self.data[:,index]*self.data[:,self.num_qubits+index]) 
@@ -35,13 +34,23 @@ class Tableau():
     
     def S(self, index):
         """ Mutates the Tableau's data to perform an S gate on qubit in position `index` """
+       
+        # check for invalid qubit index, raise error if so.
+        self._check_index_invalid(index)
+
         # adjust phase column (r = r^(x*z))
         self.data[:,-1] ^= (self.data[:,self.num_qubits+index]*self.data[:,index])
+
         # adjust z column (z = z^x)
         self.data[:,index] = (self.data[:,index]^self.data[:,self.num_qubits+index])
     
     def CX(self, control, target):
         """ Mutates the Tableau's data to perform an CX gate acting from `control` to `target` """
+        
+        # check for invalid qubit indices, raise error if so.
+        self._check_index_invalid(control)
+        self._check_index_invalid(target)
+
         # adjust phase column (r = r ^ x_c * z_t * (x_t ^ z_c ^ 1))
         self.data[:,-1] ^= (self.data[:,self.num_qubits+control] * self.data[:,target] *
                             (self.data[:,self.num_qubits+target] ^ (self.data[:,control] ^ 1)))
@@ -52,14 +61,26 @@ class Tableau():
     
     def CZ(self,control,target): # TODO: Analytical calc for less swaps
         """ Mutates the Tableau's data to perform a CZ gate acting from `control` to `target` """
+        
+        # check for invalid qubit indices, raise error if so.
+        self._check_index_invalid(control)
+        self._check_index_invalid(target)
+        
         # naive CZ = H_t CX H_t
         self.H(target)
         self.CX(control,target)
         self.H(target)
 
+    def _check_index_invalid(self, index):
+        # check for invalid qubit index, raise error if so.
+        if index < 0 or index >= self.num_qubits:
+            raise ValueError(rf"Invalid qubit index {index}")
+
+
 # ------------------------------------- #
 #           Helper Functions            #
 # ------------------------------------- #
+
 
 def _row_to_str(rowvec):
     """ row to string method for printing out a stab or destab from a tableau row """
