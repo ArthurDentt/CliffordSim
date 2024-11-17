@@ -54,13 +54,3 @@ def print_tab(tableau):
     stabilizers = [tab_row_to_str(tableau[i,:]) for i in range(n)]
     destabilizers = [tab_row_to_str(tableau[i+n,:]) for i in range(n)]
     print("Stabilizers:", stabilizers, "Destabilizers:", destabilizers) 
-
-def tab_row_to_str_1q(rowvec):
-    operator = '-' if rowvec[2] else '+'
-    operator += 'Z'*rowvec[0] + 'X'*rowvec[1]
-    return operator
-
-def print_1q_tab(tableau):
-    stabilizer = tab_row_to_str_1q(tableau[0,:])
-    destabilizer = tab_row_to_str_1q(tableau[1,:])
-    print("Stabilizer:", stabilizer, "Destabilizer:", destabilizer)
