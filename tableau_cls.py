@@ -1,5 +1,8 @@
-import numpy as np
-import copy
+# Tableau Class file for efficient Clifford circuit simulation
+# Author: Andrew Connelly
+
+from numpy import shape
+from copy import copy
 
 class Tableau():
     """ Base Tableau Class which is used to simulate Clifford circuits """
@@ -7,7 +10,7 @@ class Tableau():
     def __init__(self, data):
         """ Initialize a tableau from data, calculate number of qubits """
         self.data = data # base tableau data.
-        self.num_qubits = (np.shape(data)[0])//2 # number of qubits being simulated. (2n+1)//2 = n 
+        self.num_qubits = (shape(data)[0])//2 # number of qubits being simulated. (2n+1)//2 = n 
     
     def __repr__(self):
         """ repr method for printing tableau stabs & destabs """
@@ -26,7 +29,7 @@ class Tableau():
         self.data[:,-1] ^= (self.data[:,index]*self.data[:,self.num_qubits+index]) 
 
         # swap x_ind and z_ind columns 
-        temp = copy.copy(self.data[:,index]) # TODO: Cleaner swap?
+        temp = copy(self.data[:,index]) # TODO: Cleaner swap?
         self.data[:,index] = self.data[:,self.num_qubits+index]
         self.data[:,self.num_qubits+index] = temp
     
@@ -46,6 +49,13 @@ class Tableau():
         self.data[:,self.num_qubits+target] ^= self.data[:,self.num_qubits+control]
         # adjust z_c column (z_c = z_c ^ z_t)
         self.data[:,control] = (self.data[:,target] ^ self.data[:,control])
+    
+    def CZ(self,control,target): # TODO: Analytical calc for less swaps
+        """ Mutates the Tableau's data to perform a CZ gate acting from `control` to `target` """
+        # naive CZ = H_t CX H_t
+        self.H(target)
+        self.CX(control,target)
+        self.H(target)
 
 # ------------------------------------- #
 #           Helper Functions            #
@@ -67,5 +77,5 @@ def _row_to_str(rowvec):
     return operator
 
 def _swap(vec1,vec2):
-    """ swap method to help with swapping data without temp variables """
+    """ swap method to help with swapping data without temp variables (useful ??)"""
     return vec2, vec1
