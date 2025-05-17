@@ -93,14 +93,15 @@ class Tableau():
 def _row_to_str(rowvec):
     """ row to string method for printing out a stab or destab from a tableau row """
     n = (len(rowvec))//2
-    operator = '-' if rowvec[-1] else '+'
+    operator = '-' if rowvec[-1] else '+'   # is negative bit present
     for i in range(n):
-        if rowvec[i] and rowvec[i+n]:
-            operator += 'Y'
-        elif rowvec[i]:
-            operator += 'Z'
-        elif rowvec[i+n]:
+        if rowvec[i]:                       # if Z Stabilizer component is present
+            if rowvec[i+n]:                 # if X Stabilizer component is also present
+                operator += 'Y'
+            else:
+                operator += 'Z'
+        elif rowvec[i+n]:                   # if only X Stabilizer component is present
             operator += 'X'
-        else:
+        else:                               # if none are present
             operator += 'I'
     return operator
